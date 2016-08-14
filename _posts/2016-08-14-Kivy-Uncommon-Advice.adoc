@@ -1,0 +1,14 @@
+# Kivy - Uncommon Advice
+
+Recently I had the dubious pleasure of designing and implementing a simple GUI for a Python project I was working on. Designing graphical interfaces is, to say the least, not my cup of tea (I mostly like researching algorithms, simplifying complex logic and solving tough problems), but in this case I was forced, practically at gun point, to design and implement a GUI.
+
+To do that, I started working with (Kivy)[https://kivy.org/#home], which is distributed under MIT license and looked the most promising out of the frameworks I googled for.
+
+As I was learning about Kivy, I noticed it has some non intuitive ideas and a couple of weird design choices. These lead to a system which has a few pitfalls. I thought I'd share some of the things I learned which are not obvious from the documentation.
+
+NOTE: I have no prior experience in GUI design
+
+1. Use the KV language
+While the documentation clearly states that using the KV language is the preferable way of working with Kivy, it seems that most StackOverflow questions and answers are manipulating Kivy objects in Python. Using the KV language is (a) shorter and easier to write, and (b) gives a clean separation between app logic and presentation. So suck it up, learn the language (it's pretty simple), and use it.
+
+2. 
