@@ -8,8 +8,12 @@ As I was learning about Kivy, I noticed it has some non intuitive ideas and a co
 
 NOTE: I have no prior experience in GUI design
 
-1. **Use the KV language** - While the documentation clearly states that using the KV language is the preferable way of working with Kivy, it seems that most StackOverflow questions and answers are manipulating Kivy objects in Python. Using the KV language is (a) shorter and easier to write, and (b) gives a clean separation between app logic and presentation. So suck it up, learn the language (it's pretty simple), and use it.
+1. *Use the KV language* - While the documentation clearly states that using the KV language is the preferable way of working with Kivy, it seems that most StackOverflow questions and answers are manipulating Kivy objects in Python. Using the KV language is (a) shorter and easier to write, and (b) gives a clean separation between app logic and presentation. So suck it up, learn the language (it's pretty simple), and use it.
 
-2. **Start by placing Buttons everywhere** - 
+2. *Take advantage of Kivy Catalog and Kivy ???* -
 
-3. **Take advantage of Kivy Catalog and Kivy 
+3. *Start by placing Buttons everywhere* -
+
+4. *Use Layouts* - 
+
+5. *Understand how hints work* - 
