@@ -1,6 +1,6 @@
 # The Dangers of Multirepo
 
-In this post I'm going to make the case for a somewhat unpopular opinion - using multiple git repos (AKA multirepo) is unnecessary, and even harmful, in many cases.
+In this post I'm going to make the case for a somewhat unpopular opinion - using multiple git repos (AKA multirepo) is unnecessary and dangerous in many cases.
 
 ## The Story
 
@@ -12,4 +12,9 @@ Since you're a great programmer you always write unit tests for the component yo
 
 Later on you find out that two of the components can share some piece of infrastructure code, so you create a library and put that in its own repo.
 
-Then you want some "magic script" to build your entire system from scratch and produce a shipable product, so you write some 
+Then you want some "magic script" to build your entire system from scratch and produce a shipable product, so you write it up. But where do you put it? Doesn't seem to fit in any of the repos we created... So let's create a new repo for build stuff.
+
+And on and on it goes...
+
+While the above example sound extreme, I've actually seen this happen more than once. We'll now examine why this is a terrible way to go.
+
