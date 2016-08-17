@@ -1,0 +1,15 @@
+# The Dangers of Multirepo
+
+In this post I'm going to make the case for a somewhat unpopular opinion - using multiple git repos (AKA multirepo) is unnecessary, and even harmful, in many cases.
+
+## The Story
+
+I've seen this happening multiple times: you and a few teammates are starting a new project. The project is some complicated system that is built out of several processes. You `git init` a new repo for each process without thinking about it too much, it feels natural. 
+
+As the system evolves, the processes start talking to each other over RPC, and since the processes use different programming languages, you use something like `protobuf` or `thrift`. You then find out that both the client, and the server are using the same `.proto` or `.thrift` files, so you create a new git repo and you stick the shared API stuff in it.
+
+Since you're a great programmer you always write unit tests for the component you're in charge of, and that fits snuggily in your component's repo. A few weeks later, the system is a bit more mature and you want to start adding integration testing between components and system level testing to test the entire thing. But that doesn't really fit in any of the component's repos, and it's not really a shared-api thingy, so you create another repo for testing.
+
+Later on you find out that two of the components can share some piece of infrastructure code, so you create a library and put that in its own repo.
+
+Then you want some "magic script" to build your entire system from scratch and produce a shipable product, so you write some 
