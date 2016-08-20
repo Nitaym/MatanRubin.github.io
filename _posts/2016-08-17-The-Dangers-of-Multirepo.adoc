@@ -8,13 +8,42 @@ I've seen this happening multiple times: you and a few teammates are starting a 
 
 As the system evolves, the processes start talking to each other over RPC, and since the processes use different programming languages, you use something like `protobuf` or `thrift`. You then find out that both the client, and the server are using the same `.proto` or `.thrift` files, so you create a new git repo and you stick the shared API stuff in it.
 
-Since you're a great programmer you always write unit tests for the component you're in charge of, and that fits snuggily in your component's repo. A few weeks later, the system is a bit more mature and you want to start adding integration testing between components and system level testing to test the entire thing. But that doesn't really fit in any of the component's repos, and it's not really a shared-api thingy, so you create another repo for testing.
+Since you're a great programmer you always write unit tests for the component you're in charge of, and that fits snugly in your component's repo. A few weeks later, the system is a bit more mature and you want to start adding integration testing between components and system level testing to test the entire thing. But that doesn't really fit in any of the component's repos, and it's not really a shared-api thingy, so you create another repo for system testing.
 
-Later on you find out that two of the components can share some piece of infrastructure code, so you create a library and put that in its own repo.
+Later on you find out that two of the components can share some piece of infrastructure code, so you create a library out of it and put that in its own repo.
 
 Then you want some "magic script" to build your entire system from scratch and produce a shipable product, so you write it up. But where do you put it? Doesn't seem to fit in any of the repos we created... So let's create a new repo for build stuff.
 
-And on and on it goes...
+Without noticing, we've created ~10 git repositories for a single product. Welcome to MultiRepo Hell.
 
-While the above example sound extreme, I've actually seen this happen more than once. We'll now examine why this is a terrible way to go.
+While the above example sound extreme, I've actually seen this happen more than once. Let's examine why this is a terrible way to go.
+
+## The Consequences
+
+There are quite a lot of consequences to going MultiRepo, so I'll try to keep each bullet short.
+
+.Versioning
+Since your processes depend on each other, you must have a way to specify which version of another process you support. This means that *every git repo must be versioned in a sensible way*. By sensible I mean that you should be able to specify a dependency on some feature, some bugfix, or some API version. This quickly becomes a headache as developers must keep updating their component's version. When they forget to do so, the entire system might be in an inconsistent state, where components do not agree on which version of some other component they want to use.
+
+.Build-Time Dependencies
+In many software projects (especially in C/C++) it is common to have multiple processes share code in the form of a library. This often means that you must build the librbary _before_ you build the dependent process (this is especially true when using static libraries). 
+
+.Run-Time Dependencies
+Assuming that your components are properly versioned, how do you make sure that the contents of your final package/ISO make sense? In other words, how can you tell that the dependencies between components make sense? For example, if componentA requires componentB-1.0 but componentC requires componentB-2.0, a possible consequence is an install time failure, or even worse - a run time failure.
+
+.Co-developing
+asdsad
+
+.Testing and Test Matrix
+jhll
+
+## Bottom Line
+
+If you are developing a single product, in which all components are tightly coupled and advance together, keep it simple and start out with a single repo. Each component can have its own subdirectory within that repo. The system wide build script/Makefile goes in the root of the repo. System tests get their own directory, and so does the shared APIs `proto` and `thrift` files.
+
+People often make the mistake of thinking that a git repo corrolates with a single package, a single process, a single language or a single library. In essence, however, git is language agnostic and does not care how many processes, packages and/or libraries it contains. 
+
+So https://en.wikipedia.org/wiki/KISS_principle[KISS] and start out with a single repo. If you later feel you absolutely must break it into more than one repo - https://help.github.com/articles/splitting-a-subfolder-out-into-a-new-repository/[it's easy to do so].
+
+The main take away (?) here is that breaking a single repo into multiple repos does not come for free. There's a lot of overhead to maintaining multiple git repos, and you should avoid it if subdirectories within a single repo does the job for you.
 
