@@ -34,8 +34,45 @@ Assuming that your components are properly versioned, how do you make sure that 
 .Co-developing
 asdsad
 
-.Testing and Test Matrix
+.Test Matrix
 jhll
+
+.Build Reproducability
+An important trait of a good build system is the ability to exactly reproduce a specific build from scratch. How would you do that in a multirepo system? The answer is that you need to know the exact state of each repo at the time the build was executed. That means that you need to track the exact commit SHA1s for each repository, and your  "magic script" now has to know how to check out the exact commit SHA1 for each repository and build it. If you haven't done that, you're in to some error-prone and tiring manual work to get each repo in to the specific commit.
+
+## How does Sinlge Repo compare?
+Let's tackle each one of the above sections and see how simple it is when you're using a single git repository.
+
+.Versioning
+You don't need it. You have a single version, which represents the product's version, and that's it. Whenever you check out a commit, all sub-components are automatically aligned. It's like magic.
+
+.Build Time Dependencies
+The dependencies themselves still exist, but it's much easier to stay consistent. If a some commit changes the shared API, for example, it should also modify the dependent components to match that change. Everything stays consistent, and the changes across components are *atomic*.
+
+.Runtime Dependencies
+Similaraly to buildtime dependencies, runtime dependencies are a non issue in single repo. 
+
+.Co-developing
+Is as easy as working on a shared git branch. Just like git wants you to do. That branch contains the required changes across all components, and when it's merged - it's merged. There are no funky limbo states in which some components have merged their stuff and others haven't.
+
+.Test Matrix
+There is no test matrix. You simply test the latest version of your master branch. Easy breezy.
+
+.Relative Locations
+
+
+## When can I use MultiRepo?
+MultiRepo is a suitable solution in some cases. Specifically, if you're developing loosly coupled components with stable APIs which maintain proper backwards compatibility, you might find that multirepo is a good solution for you. 
+Specifically, Micro Services architectures are probably better kept in many small repositories. 
+
+## Counter Arguments
+Here are some common arguments that people have against using a single repo, and my thoughts on them:
+
+* *"I might want to open source this component some day"* - Ok, when that day comes, break it off in to it’s own repo. 
+* *"I don’t want to see other teams' commits in my git log"* - first of all, why? If components in the product tightly coupled, commits by other teams are very relevant to your work. If you still want to view just your team's history, run “git log .” inside your team’s sub directory.
+* *"I don’t want to build the entire product when I make"* - you don’t have to, just run “make” in your team’s sub directory. However, you still can, if you need, build the entire product in a single command. 
+* *"If I have an integration branch that comprises commits from different teams, it will be harder to rebase it on master"* - that is true, but it guarantees that when you do rebase over master, all the code is synced. With multiple repos, you get no such guarantee, and things will probably break after you rebase.
+* *"I don’t want to clone the entire product, it’s too big"* - cloning does not happen often. And if the Linux Kernel could be version controlled in a single repo, why do you need more?
 
 ## Bottom Line
 
