@@ -1,0 +1,96 @@
+# The Dangers of Multirepo
+
+In this post I'm going to make the case for a somewhat unpopular opinion - using multiple git repos (AKA multirepo) is unnecessary and dangerous in many cases. A single git repo (AKA monorepo) is simpler and satisfies the requirements of many projects.
+
+## The Story
+
+I've seen this happening multiple times: you and a few teammates are starting a new project. The project is some complicated system that comprises several processes. You `git init` a new repo for each process without thinking about it too much, it feels natural. 
+
+As the system evolves, the processes start talking to each other over RPC, and since the processes use different programming languages, you use something like `protobuf` or `thrift`. Since the `.proto/.thrift` files are used by multiple components, they don't belong in any of the repos you created, so you create a new git repo and stick the shared API stuff in it.
+
+Since you're a great software engineer you always write unit tests for your code, and that fits snugly in your component's repo. A few weeks later, the system is a bit more mature and you want to start adding integration testing between components and system level testing to test the entire thing. But that doesn't really fit in any component's repo, and it's certainly not a shared-api thingy, so you create another repo for system testing.
+
+Later on you realize that two of the components can share some piece of infrastructure code, so you create a library out of it and put that in its own repo.
+
+Then you want some "magic script" to build your entire system from scratch and produce a shipable product, so you write it up. But where do you put it? Doesn't seem to fit in any of the repos you created... So you create a new repo for build stuff.
+
+Without noticing, you've just created ~10 git repositories for a single product. Welcome to MultiRepo Hell.
+
+While the above example sound extreme, I've actually seen this happen more than once. We'll now examine why this is a terrible way to go.
+
+## MultiRepo Hell
+
+There are a lot of consequences to going MultiRepo, so the list below is not complete.
+
+.Versioning
+Unless your APIs are simple, stable and well defined, you're going to need a way to specify which version process A knows how to talk to which version of process B. This means that *every git repo must be versioned in a sensible way*. And while "sensible" sounds simple enough, it is not (and that might deserve its own blog post). In a nutshell, by sensible I mean that you should be able to specify a dependency on some feature, some bugfix, or some API version. This quickly becomes a headache as developers must keep updating their component's version. When they forget to do so, the entire system might be in an inconsistent state, where components do not agree on which version of some other component they want to use.
+
+Multirepo creates a ton of interdependencies that simply do not exist in Monorepo, since in monorepo there is only one state of the code - the current commit - and not some combinatorial monster that depends on the exact state of each repo.
+
+.Build-Time Dependencies
+In many software projects (especially in C/C++) it is common to have multiple processes share code in the form of a library. This often means that you must build the librbary _before_ you build the dependent process (this is especially true when using static libraries). As a consequence, your upper level build script (which resides in the so called "build" repo) must know in which order to build the components. Moreover, a dependent component must know the relative location of the component it depends on, and it must rely on that component to be built before itself. Yuck.
+
+In Monorepo, relative locations between components are well known - each one has a directory under the root directory. That simplifies relative path issues between components ("where the heck is that `include` folder?"), and makes the upper level build script much simpler.
+
+.Run-Time Dependencies
+Assuming that your components are properly versioned, how do you make sure that the contents of your final package/ISO make sense? In other words, how can you tell that the dependencies between components make sense? For example, if componentA requires componentB-1.0 but componentC requires componentB-2.0, a possible consequence is an install time failure, or even worse - a run time failure. A possible solution is creating some verification step that makes sure the dependencies make sense. Oh man...
+
+Monorepo simplifies this again simply by having exactly one possible state of your code. If you change a library API, you make the corresponding change in all dependent components in the same commit. Poof, problem solved.
+
+.Co-developing
+Let's say two developers work on a feature that requires changes to 2 components + their shared API. Each developer creates a feature branch for that feature in its component, and a corresponding branch is created in the shared APIs repo. If any of these branches is merged before the other two, the system is in an inconsistent state. If the API change is a backward compatible API change, or if you use some fancy method such as feature toggles, that might not be a problem. But many times that is not the case, and your entire system can break.
+
+One solution I've seen people use is to synchronize the merges between all relevant branches. Don't even get me started on how backwards that is...
+
+So how does Monorepo compare? In Monorepo you probably just have a feature branch for your new feature. Developers co-develop on that branch (or they use any other git method to co-develop), and when they're done developing - they merge. That's it. 
+
+.Test Matrix
+Because each repo may have its own state, you test matrix goes berserk. You need to mix and match versions of components, make sure they work well together, etc. That is a lot of work, and probably not what you want to be doing when you start a new project. You want a single version, you test it, and if it's good - you deploy it.
+
+Monorepo, well, you got the gist of it.
+
+.Build Reproducability
+An important trait of a good build system is the ability to reproduce a specific build precisely. How would you do that in a multirepo system? The answer is that you need to know the exact state of each repo at the time the build was executed. That means that you need to track the exact commit SHA1s for each repository, and your "magic script" now has to know how to check out the exact commit SHA1 for each repository and build it. If you haven't done that, you're in for some error-prone and tiring manual work to get each repo in to the specific commit. Oh, and by the way, your "build" repo also has to be in the exact state it was when you built that build, so don't forget that.
+
+Are we having fun yet?
+
+## What is happening here?
+At this point you must be asking yourself - what is going on here? There are many projects that use multirepo. Heck, OpenStack is some 350 git repositories. The Jupyter project (which is amazing, BTW) is comprised of 12 repos. They even moved from Monorepo to Multirepo http://blog.jupyter.org/2015/04/15/the-big-split/[and blogged all about it].
+
+The answer is that these projects are usually projects in which the APIs between components are very stable, and/or the components are loosly coupled. The scenario described above is not like that. The main point here is this - in the early days of most projects, the project is essentially a monolith. Even if it is comprised of several processes, logically it is probably a monolith. And a monolith should be source controlled in a single git repository.
+
+(Insert here some smart comment for all the people who are about to say "I build microservices". Good for you. Most projects are not built in a microservices architecture).
+
+.Say, Matan, when _should_ I use MultiRepo?
+MultiRepo is a suitable solution in some cases. Specifically:
+
+* You are developing loosly coupled components with stable APIs which maintain proper backwards compatibility, and are willing to version your stuff and handle all the disadvantages listed above.
+* You need/want to open source some parts of your project but not other parts.
+* You need to restrict permissions to some highly sensitive piece of code in your project.
+* You like suffering. 
+
+
+## Counter Arguments
+Here are some common arguments that people have against using a single repo, and my thoughts on them:
+
+* *"I might want to open source this component some day"* - Ok, when that day comes, break it off in to it’s own repo. 
+* *"I don’t want to see other teams' commits in my git log"* - first of all, why? If components in the product tightly coupled, commits by other teams are very relevant to your work. If you still want to view just your team's history, run “git log .” inside your team’s sub directory.
+* *"I don’t want to build the entire product when I make"* - you don’t have to, just run “make” in your team’s sub directory. However, you still can, if you need, build the entire product in a single command. 
+* *"If I have an integration branch that comprises commits from different teams, it will be harder to rebase it on master"* - that is true, but it guarantees that when you do rebase over master, all the code is synced. With multiple repos, you get no such guarantee, and things will probably break after you rebase.
+* *"I don’t want to clone the entire product, it’s too big"* - cloning does not happen often. And if the Linux Kernel could be version controlled in a single repo, why do you need more?
+
+## Interesting Examples
+* http://www.wired.com/2015/09/google-2-billion-lines-codeand-one-place/[Google Is 2 Billion Lines of Code—And It’s All in One Place]
+* http://blog.jupyter.org/2015/04/15/the-big-split/[Project Jupyter's "The Big Split"]
+* https://github.com/torvalds/linux[Linux Kernel]
+
+
+## Bottom Line
+
+If you are developing a single product, in which all components are tightly coupled and advance together, keep it simple and start out with a single repo. Each component can have its own subdirectory within that repo. The system wide build script/Makefile goes in the root of the repo. System tests get their own directory, and so does the shared APIs `proto` and `thrift` files.
+
+People often make the mistake of thinking that a git repo corrolates with a single package, a single process, a single language or a single library. In essence, however, git is language agnostic and does not care how many processes, packages and/or libraries it contains. 
+
+So https://en.wikipedia.org/wiki/KISS_principle[KISS] and start out with a single repo. If you later feel you absolutely must break it into more than one repo - https://help.github.com/articles/splitting-a-subfolder-out-into-a-new-repository/[it's easy to do so].
+
+The main take away here is that using Multirepo does not come for free. There's a lot of overhead to maintaining multiple git repos, and you should avoid it if subdirectories within a single repo does the job for you.
